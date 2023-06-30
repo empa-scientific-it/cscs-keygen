@@ -17,106 +17,10 @@ import json
 import os
 import pathlib as pl
 import re
-import shlex
-import shutil
-import subprocess as sp
 import sys
 from datetime import datetime, timedelta
-from dataclasses import dataclass
 
-try:
-    import requests
-except ImportError:
-    print("Please, install 'requests' with 'pip install requests' first.")
-    sys.exit(1)
-
-
-@dataclass
-class Field:
-    """Utility class for a string field"""
-
-    content: str
-
-    def __str__(self) -> str:
-        return self.content
-
-    def __format__(self, __format_spec: str) -> str:
-        if __format_spec == "hidden":
-            return self.content[0] + "*" * len(self.content[1:-4]) + self.content[-4:]
-        return self.content
-
-
-def run_command(cmd: str, **kwargs) -> str:
-    """Run a `cmd` and return the output or raise an exception"""
-    cmd = shlex.split(cmd)
-
-    if not shutil.which(cmd[0]):
-        raise FileNotFoundError(f"Command {cmd[0]} not found.")
-
-    try:
-        output = sp.run(cmd, capture_output=True, check=True, **kwargs)
-    except sp.CalledProcessError as err:
-        print(err.stderr, file=sys.stderr)
-        raise err
-
-    if "text" in kwargs and kwargs["text"]:
-        return output.stdout
-
-    return output.stdout.decode()
-
-
-def get_keypair_from_api(user: str, pwd: str, otp: str) -> tuple[str]:
-    """Peform the API request to CSCS"""
-    print("Fetching signed key from CSCS API...")
-
-    try:
-        response = requests.post(
-            "https://sshservice.cscs.ch/api/v1/auth/ssh-keys/signed-key",
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
-            json={
-                "username": user,
-                "password": pwd,
-                "otp": otp,
-            },
-            verify=True,
-            timeout=30.0,
-        )
-        response.raise_for_status()
-    except requests.exceptions.HTTPError as err:
-        try:
-            message = err.response.json()
-        except Exception:
-            raise SystemExit(1) from err
-
-        if "payload" in message and "message" in message["payload"]:
-            print(f"Error: {message['payload']}", file=sys.stderr)
-            sys.exit(1)
-    else:
-        pub_key = response.json()["public"]
-        priv_key = response.json()["private"]
-        if not (pub_key and priv_key):
-            print("Error: no public/private key returned", file=sys.stderr)
-            sys.exit(1)
-
-    return priv_key, pub_key
-
-
-def save_keyfile(key_content: str, key_path: pl.Path, key_type: str) -> None:
-    """Save the key to disk"""
-    try:
-        key_path.write_text(key_content)
-    except IOError:
-        print(f"Error: could not write {key_type} key to {key_path}", file=sys.stderr)
-        sys.exit(1)
-
-    try:
-        if key_type == "private":
-            key_path.chmod(0o600)
-        elif key_type == "public":
-            key_path.chmod(0o644)
-    except:
-        print(f"Error: could not set permissions on key {key_path}", file=sys.stderr)
-        sys.exit(1)
+from utils import run_command, get_keypair_from_api, save_key, add_key
 
 
 def is_cli_logged_in() -> bool:
@@ -169,11 +73,9 @@ def get_keys(bitwarden_item_id: str = None) -> tuple[str]:
     # Get the credentials from Bitwarden
     print("Fetching credentials from Bitwarden...")
     creds = json.loads(run_command(f"bw get item {bitwarden_item_id} --raw"))
-    username = Field(creds["login"]["username"])
-    password = Field(creds["login"]["password"])
-    totp = Field(
-        run_command(f"bw get totp {bitwarden_item_id} --raw", text=True).strip()
-    )
+    username = creds["login"]["username"]
+    password = creds["login"]["password"]
+    totp = run_command(f"bw get totp {bitwarden_item_id} --raw", text=True).strip()
 
     # Validate the credentials
     if not re.match(r"^[a-z0-9_-]{2,15}$", username):
@@ -190,17 +92,6 @@ def get_keys(bitwarden_item_id: str = None) -> tuple[str]:
 
     # Fetch and return the keys from the API
     return get_keypair_from_api(username, password, totp)
-
-
-def add_keys(key_path: pl.Path) -> None:
-    """Add the keys to ssh-agent"""
-    # TODO: add support for Windows
-    add_cmd = "ssh-add -t 1d"
-
-    if sys.platform == "darwin":
-        add_cmd = "/usr/bin/ssh-add -t 1d --apple-use-keychain"
-
-    run_command(f"{add_cmd} {key_path.resolve()}")
 
 
 if __name__ == "__main__":
@@ -261,7 +152,7 @@ if __name__ == "__main__":
         )
         if delta < timedelta(hours=24.0):
             print("Valid private key found, adding it to ssh-agent...")
-            add_keys(private_key_path)
+            add_key(private_key_path)
             print("Done.")
             sys.exit(0)
 
@@ -286,13 +177,13 @@ if __name__ == "__main__":
 
     # Write the keys to disk
     print(f"Saving the keys to {private_key_path.parent}...")
-    save_keyfile(private_key, private_key_path, "private")
-    save_keyfile(public_key, public_key_path, "public")
+    save_key(private_key, private_key_path, "private")
+    save_key(public_key, public_key_path, "public")
 
     # Set the passphrase
     item_json = json.loads(run_command(f"bw get item {item_id} --raw"))
     try:
-        passphrase = Field(item_json["fields"][0]["value"])
+        passphrase = item_json["fields"][0]["value"]
     except (KeyError, IndexError):
         print(f"Passphrase field not found in Bitwarden item with ID {item_id}.")
         sys.exit(1)
@@ -304,6 +195,6 @@ if __name__ == "__main__":
     # Add the keys to ssh-agent
     if args.add:
         print("Adding keys to ssh-agent...")
-        add_keys(private_key_path)
+        add_key(private_key_path)
 
     print("Done.")

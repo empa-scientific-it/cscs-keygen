@@ -21,8 +21,10 @@ class CredsHelper:
         """Check if the backend is logged in"""
         if self.logged_in:
             return True
+
         if self.backend == "bw":
             env_var = "BW_SESSION"
+
         if self.backend == "op":
             env_var = "OP_SERVICE_ACCOUNT_TOKEN"
 

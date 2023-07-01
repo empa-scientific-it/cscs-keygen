@@ -3,7 +3,6 @@ Utils module
 """
 import pathlib as pl
 import shlex
-import shutil
 import subprocess as sp
 import sys
 
@@ -12,10 +11,8 @@ import requests
 
 def run_command(cmd: str, **kwargs) -> str:
     """Run a `cmd` and return the output or raise an exception"""
-    cmd = shlex.split(cmd, posix=False)
-
-    if not shutil.which(cmd[0]):
-        raise FileNotFoundError(f"Command {cmd[0]} not found.")
+    if sys.platform != "win32":
+        cmd = shlex.split(cmd)
 
     try:
         output = sp.run(cmd, capture_output=True, check=True, **kwargs)
@@ -23,10 +20,7 @@ def run_command(cmd: str, **kwargs) -> str:
         print(err.stderr, file=sys.stderr)
         raise err
 
-    if kwargs.get("text"):
-        return output.stdout
-
-    return output.stdout.decode()
+    return output.stdout if kwargs.get("text") else output.stdout.decode()
 
 
 def get_keypair_from_api(user: str, pwd: str, otp: str) -> tuple[str]:

@@ -9,18 +9,25 @@ import sys
 import requests
 
 
-def run_command(cmd: str, **kwargs) -> str:
+def run_command(cmd: str, capture: bool = True, check: bool = True, **kwargs) -> str | int:
     """Run a `cmd` and return the output or raise an exception"""
     if sys.platform != "win32":
         cmd = shlex.split(cmd)
 
     try:
-        output = sp.run(cmd, capture_output=True, check=True, **kwargs)
+        output = sp.run(cmd, capture_output=capture, check=check, **kwargs)
     except sp.CalledProcessError as err:
         print(err.stderr, file=sys.stderr)
         raise err
 
-    return output.stdout if kwargs.get("text") else output.stdout.decode()
+    if capture:
+        if kwargs.get("text"):
+            return str(output.stdout)
+
+        return output.stdout.decode()
+
+    return output.returncode
+
 
 
 def get_keypair_from_api(user: str, pwd: str, otp: str) -> tuple[str]:

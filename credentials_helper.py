@@ -20,7 +20,6 @@ class CredsHelper(ABC):
     backend_token: str = field(init=False)
     backend_name: str = field(init=False)
     item_name: str = None
-    item_id: str = None
     _is_unlocked: bool = False
     __credentials: dict = field(factory=dict)
 
@@ -49,7 +48,7 @@ class CredsHelper(ABC):
     def is_unlocked(self, _) -> NoReturn:
         raise RuntimeError(f"You must login or unlock {self.backend_name} first.")
 
-    def are_creds_valid(self) -> bool:
+    def are_credentials_valid(self) -> bool:
         """Validate credentials"""
         if not self.credentials:
             return False
@@ -85,14 +84,12 @@ class BWHelper(CredsHelper):
                 f"{self.backend_name} vault is locked or you never logged in."
             )
 
-        __item = self.item_id or self.item_name
-
-        if not __item:
-            raise ValueError("Either item's ID or name must be provided.")
+        if not self.item_name:
+            raise ValueError("Bitwarden item's ID or name must be provided.")
 
         for __field in ("username", "password", "totp"):
             self.credentials[__field] = run_command(
-                f'bw get {__field} "{__item}" --raw', text=True
+                f'bw get {__field} "{self.item_name}" --raw', text=True
             ).strip()
 
         return self.credentials

@@ -142,6 +142,10 @@ if __name__ == "__main__":
     )
     if not args.dry_run:
         private_key, public_key = get_keys_from_api(**credentials)
+
+        if not (private_key or public_key):
+            raise RuntimeError("Could not fetch signed key from CSCS API.")
+
         save_key(private_key, private_key_path, "private")
         save_key(public_key, public_key_path, "public")
 

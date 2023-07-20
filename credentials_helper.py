@@ -19,9 +19,9 @@ class CredsHelper(ABC):
     backend: str = field(validator=validators.in_(["bw", "op"]))
     backend_token: str = field(init=False)
     backend_name: str = field(init=False)
-    item_name: str = None
+    item_name: str = ""
     _is_unlocked: bool = False
-    __credentials: dict = field(factory=dict)
+    __credentials: dict = field(factory=dict, init=False)
 
     def __attrs_post_init__(self) -> None:
         if self.backend == "bw":
@@ -42,6 +42,7 @@ class CredsHelper(ABC):
 
     @property
     def is_unlocked(self) -> bool:
+        """Check if the vault is unlocked"""
         return self._is_unlocked
 
     @is_unlocked.setter
@@ -53,10 +54,13 @@ class CredsHelper(ABC):
         if not self.credentials:
             return False
 
-        return all((re.match(r"^[a-z0-9_-]{2,15}$", self.credentials.get("username")),
-                    self.credentials.get("password"),
-                    re.match(r"^[0-9]{6}$", self.credentials.get("totp")))
-                   )
+        return all(
+            (
+                re.match(r"^[a-z0-9_-]{2,15}$", self.credentials.get("username")),
+                self.credentials.get("password"),
+                re.match(r"^[0-9]{6}$", self.credentials.get("totp")),
+            )
+        )
 
     @abstractmethod
     def unlock(self) -> None:
@@ -103,7 +107,10 @@ class OPHelper(CredsHelper):
 
     def unlock(self) -> None:
         if not self.is_unlocked:
-            if os.getenv(self.backend_token) or run_command("op signin", capture=False) == 0:
+            if (
+                os.getenv(self.backend_token)
+                or run_command("op signin", capture=False) == 0
+            ):
                 self._is_unlocked = True
 
     def fetch_credentials(self) -> Dict[str, str]:

@@ -10,16 +10,20 @@ import logging
 import requests
 
 
-def run_command(cmd: str, capture: bool = True, check: bool = True, **kwargs) -> str | int:
+def run_command(
+    cmd: str | list[str], capture: bool = True, check: bool = True, **kwargs
+) -> str | int:
     """Run a `cmd` and return the output or raise an exception"""
-    if sys.platform != "win32":
+    if isinstance(cmd, str) and sys.platform != "win32":
         cmd = shlex.split(cmd)
 
     try:
         output = sp.run(cmd, capture_output=capture, check=check, **kwargs)
     except sp.CalledProcessError as err:
-        logging.error(err.stderr, exc_info=err)
-        raise err
+        logging.error(
+            "Error while running the command '%s': %s", " ".join(cmd), err.stderr
+        )
+        raise SystemExit(err.returncode) from err
 
     if capture:
         if kwargs.get("text"):
@@ -30,9 +34,13 @@ def run_command(cmd: str, capture: bool = True, check: bool = True, **kwargs) ->
     return output.returncode
 
 
-def get_keys_from_api(username: str, password: str, totp: str) -> tuple[str, str] | None:
+def get_keys_from_api(
+    username: str, password: str, totp: str
+) -> tuple[str | None, str | None]:
     """Perform the API request to CSCS"""
     logging.info("Fetching signed key from CSCS API...")
+
+    priv_key = pub_key = None
 
     try:
         response = requests.post(
@@ -60,15 +68,15 @@ def get_keys_from_api(username: str, password: str, totp: str) -> tuple[str, str
         pub_key = response.json()["public"]
         priv_key = response.json()["private"]
 
-        if not (pub_key and priv_key):
-            logging.error("Error: no public/private key returned")
-            sys.exit(1)
-
-        return priv_key, pub_key
+    return priv_key, pub_key
 
 
-def save_key(key_content: str, key_path: pl.Path, key_type: str) -> None:
+def save_key(key_content: str | None, key_path: pl.Path, key_type: str) -> None:
     """Save a key file to disk and set the right permissions"""
+    if not key_content:
+        logging.error(f"Error: could not save {key_type} key to {key_path}")
+        raise TypeError("Key content is empty.")
+
     try:
         key_path.write_text(key_content)
     except IOError:

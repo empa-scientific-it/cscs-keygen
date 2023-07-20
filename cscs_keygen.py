@@ -22,14 +22,13 @@ from utils import add_key, get_keys_from_api, save_key
 def setup_logging(verbosity: int) -> None:
     """Setup logging"""
     # default: logging.WARNING
-    default_log_level = getattr(logging, (os.getenv('LOG_LEVEL', 'WARNING').upper()))
+    default_log_level = getattr(logging, (os.getenv("LOG_LEVEL", "WARNING").upper()))
     verbosity = min(2, verbosity)
 
     log_level = default_log_level - verbosity * 10
 
     logging.basicConfig(
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        level=log_level
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=log_level
     )
 
 
@@ -42,23 +41,31 @@ if __name__ == "__main__":
     parser.add_argument(
         "backend",
         choices=["bw", "op", "bitwarden", "1password"],
-        help="backend for your vault: Bitwarden or 1Password"
+        help="backend for your vault: Bitwarden or 1Password",
     )
 
     parser.add_argument(
         "item_id",
-        help="item name or ID in your vault that contains the credentials (username, password, totp)"
+        help="item name or ID in your vault that contains the credentials (username, password, totp)",
     )
 
-    parser.add_argument("--verbose", "-v", action="count", default=0, help="verbose output")
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="count",
+        default=0,
+        dest="verbosity",
+        help="verbose output",
+    )
 
     parser.add_argument(
-        "--quiet", "-q",
+        "--quiet",
+        "-q",
         action="store_const",
         const=-1,
         default=0,
         dest="verbosity",
-        help="silence all output except errors"
+        help="silence all output except errors",
     )
 
     parser.add_argument(
@@ -70,13 +77,21 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "--dry-run",
+        "-n",
+        action="store_true",
+        default=False,
+        help="log the actions without executing them",
+    )
+
+    parser.add_argument(
         "--add", "-a", action="store_true", default=False, help="add keys to ssh-agent"
     )
 
     args = parser.parse_args()
 
     # Logging
-    setup_logging(args.verbose)
+    setup_logging(args.verbosity)
 
     # Set private/public key paths
     (dot_ssh_path := pl.Path.home() / ".ssh").mkdir(exist_ok=True)
@@ -90,7 +105,8 @@ if __name__ == "__main__":
         )
         if delta < timedelta(hours=24.0):
             logging.info("Valid private key found, adding it to ssh-agent...")
-            add_key(private_key_path)
+            if not args.dry_run:
+                add_key(private_key_path)
             print("Done.")
             sys.exit(0)
 
@@ -98,17 +114,21 @@ if __name__ == "__main__":
     if private_key_path.exists() or public_key_path.exists():
         if args.force:
             logging.warning("Deleting existing keys...")
-            private_key_path.unlink(missing_ok=True)
-            public_key_path.unlink(missing_ok=True)
+            if not args.dry_run:
+                private_key_path.unlink(missing_ok=True)
+                public_key_path.unlink(missing_ok=True)
         else:
-            logging.warning("Key pair already exists. Use --force if you want to delete them.")
+            logging.warning(
+                "Key pair already exists. Use --force if you want to delete them."
+            )
             sys.exit(1)
 
     # Create a new credentials helper
-    creds_helper = BWHelper if args.backend in ("bw", "bitwarden") else OPHelper
-    vault = creds_helper(item_name=args.item_id)
+    CredsHelper = BWHelper if args.backend in ("bw", "bitwarden") else OPHelper
+    vault = CredsHelper(item_name=args.item_id)
 
     # Get the credentials
+    logging.info("Unlocking the vault and fetching credentials...")
     vault.unlock()
     credentials = vault.fetch_credentials()
 
@@ -117,17 +137,21 @@ if __name__ == "__main__":
         # TODO: catch which credential is not valid
         raise RuntimeError("Credentials are not valid.")
 
-    # Get the keys from CSCS API
-    private_key, public_key = get_keys_from_api(**credentials)
-
-    # Write the keys to disk
-    logging.info(f"Saving the keys to {private_key_path.parent}...")
-    save_key(private_key, private_key_path, "private")
-    save_key(public_key, public_key_path, "public")
+    logging.info(
+        f"Fetching signed key from CSCS API and saving it to disk to '{private_key_path.parent}'..."
+    )
+    if not args.dry_run:
+        private_key, public_key = get_keys_from_api(**credentials)
+        save_key(private_key, private_key_path, "private")
+        save_key(public_key, public_key_path, "public")
 
     logging.info("Done.")
 
-    # TODO: set the passphrase
-    # CredsHelper needs some modification
+    # TODO: set the passphrase on the private key
+
+    if args.add:
+        logging.info("Adding private key to ssh-agent...")
+        if not args.dry_run:
+            add_key(private_key_path)
 
     sys.exit(0)

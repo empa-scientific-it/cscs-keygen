@@ -12,9 +12,13 @@ from attr import define, field, validators
 from utils import run_command
 
 
+class CredentialsHelperError(Exception):
+    """Base exception for credentials helper"""
+
+
 @define
 class CredsHelper(ABC):
-    """A base abstract class for password managers"""
+    """A base class for password managers"""
 
     backend: str = field(validator=validators.in_(["bw", "op"]))
     backend_token: str = field(init=False)
@@ -38,7 +42,7 @@ class CredsHelper(ABC):
 
     @credentials.setter
     def credentials(self, _) -> NoReturn:
-        raise RuntimeError("Credentials cannot be set manually.")
+        raise CredentialsHelperError("Credentials cannot be set manually.")
 
     @property
     def is_unlocked(self) -> bool:
@@ -47,7 +51,9 @@ class CredsHelper(ABC):
 
     @is_unlocked.setter
     def is_unlocked(self, _) -> NoReturn:
-        raise RuntimeError(f"You must login or unlock {self.backend_name} first.")
+        raise CredentialsHelperError(
+            f"You must login or unlock {self.backend_name} first."
+        )
 
     def are_credentials_valid(self) -> bool:
         """Validate credentials"""
@@ -84,7 +90,7 @@ class BWHelper(CredsHelper):
     def fetch_credentials(self) -> Dict[str, str]:
         """Fetch the credentials from Bitwarden vault"""
         if not self.is_unlocked:
-            raise RuntimeError(
+            raise CredentialsHelperError(
                 f"{self.backend_name} vault is locked or you never logged in."
             )
 
@@ -116,7 +122,7 @@ class OPHelper(CredsHelper):
     def fetch_credentials(self) -> Dict[str, str]:
         """Fetch the credentials from 1Password vault"""
         if not self.is_unlocked:
-            raise RuntimeError(
+            raise CredentialsHelperError(
                 f"{self.backend_name} vault is locked or you never logged in."
             )
 

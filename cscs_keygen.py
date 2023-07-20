@@ -136,7 +136,7 @@ if __name__ == "__main__":
     # Validate the credentials
     if not vault.are_credentials_valid():
         # TODO: catch which credential is not valid
-        raise RuntimeError("Credentials are not valid.")
+        raise SystemExit("Credentials are not valid.")
 
     logging.info(
         f"Fetching signed key from CSCS API and saving it to '{private_key_path.parent}'..."
@@ -145,7 +145,7 @@ if __name__ == "__main__":
         private_key, public_key = get_keys_from_api(**credentials)
 
         if not (private_key or public_key):
-            raise RuntimeError("Could not fetch signed key from CSCS API.")
+            raise SystemExit("Could not fetch signed key from CSCS API.")
 
         save_key(private_key, private_key_path, "private")
         save_key(public_key, public_key_path, "public")

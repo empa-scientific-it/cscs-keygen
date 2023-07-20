@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Python script to fetch SSH key pair from CSCS service using credentials stored in Bitwarden
+Python script to fetch SSH key pair from CSCS service using credentials stored in Bitwarden or 1Password vaults.
 
 Pre-requisites:
-    - Python 3 installation with the 'requests' package installed
+    - Python 3 installation and `requirements.txt` dependencies
     - Bitwarden CLI: https://bitwarden.com/help/cli/
     - 1Password CLI: https://developer.1password.com/docs/cli/get-started/
 """
@@ -72,7 +72,6 @@ if __name__ == "__main__":
         "--force",
         "-f",
         action="store_true",
-        default=False,
         help="delete existing keys and fetch new ones",
     )
 
@@ -80,18 +79,20 @@ if __name__ == "__main__":
         "--dry-run",
         "-n",
         action="store_true",
-        default=False,
         help="log the actions without executing them",
     )
 
     parser.add_argument(
-        "--add", "-a", action="store_true", default=False, help="add keys to ssh-agent"
+        "--add", "-a", action="store_true", help="add keys to ssh-agent"
     )
 
     args = parser.parse_args()
 
     # Logging
     setup_logging(args.verbosity)
+
+    if args.dry_run:
+        logging.info("Dry run mode enabled, no action will be executed.")
 
     # Set private/public key paths
     (dot_ssh_path := pl.Path.home() / ".ssh").mkdir(exist_ok=True)
@@ -118,7 +119,7 @@ if __name__ == "__main__":
                 private_key_path.unlink(missing_ok=True)
                 public_key_path.unlink(missing_ok=True)
         else:
-            logging.warning(
+            logging.error(
                 "Key pair already exists. Use --force if you want to delete them."
             )
             sys.exit(1)
@@ -138,7 +139,7 @@ if __name__ == "__main__":
         raise RuntimeError("Credentials are not valid.")
 
     logging.info(
-        f"Fetching signed key from CSCS API and saving it to disk to '{private_key_path.parent}'..."
+        f"Fetching signed key from CSCS API and saving it to '{private_key_path.parent}'..."
     )
     if not args.dry_run:
         private_key, public_key = get_keys_from_api(**credentials)

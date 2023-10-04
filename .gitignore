@@ -1,2 +1,4 @@
 .venv
+.nova
+.mypy_cache
 __pycache__

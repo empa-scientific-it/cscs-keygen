@@ -35,18 +35,8 @@ def setup_logging(verbosity: int) -> None:
 if __name__ == "__main__":
     # Parse the command-line arguments
     parser = argparse.ArgumentParser(
-        description="Fetch private/public key pair from CSCS service using Bitwarden credentials"
-    )
-
-    parser.add_argument(
-        "backend",
-        choices=["bw", "op", "bitwarden", "1password"],
-        help="backend for your vault: Bitwarden or 1Password",
-    )
-
-    parser.add_argument(
-        "item_id",
-        help="item name or ID in your vault that contains the credentials (username, password, totp)",
+        description="Fetch private/public key pair from CSCS service "
+        "using credentials stored in a password manager."
     )
 
     parser.add_argument(
@@ -69,21 +59,44 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--force",
-        "-f",
-        action="store_true",
-        help="delete existing keys and fetch new ones",
-    )
-
-    parser.add_argument(
         "--dry-run",
         "-n",
         action="store_true",
         help="log the actions without executing them",
     )
 
-    parser.add_argument(
-        "--add", "-a", action="store_true", help="add keys to ssh-agent"
+    subparser = parser.add_subparsers(
+        title="subcommands",
+        help="available subcommands",
+        dest="command",
+    )
+
+    parser_fetch = subparser.add_parser(
+        "fetch", help="fetch a new key pair from CSCS service"
+    )
+
+    parser_add = subparser.add_parser(
+        "add", help="add an existing key pair to ssh-agent"
+    )
+
+    # 'fetch' subcommand arguments
+
+    parser_fetch.add_argument(
+        "backend",
+        choices=["bw", "op", "bitwarden", "1password"],
+        help="backend for your vault: Bitwarden or 1Password",
+    )
+
+    parser_fetch.add_argument(
+        "item_id",
+        help="item name or ID in your vault that contains the credentials (username, password, totp)",
+    )
+
+    parser_fetch.add_argument(
+        "--force",
+        "-f",
+        action="store_true",
+        help="delete existing keys and fetch new ones",
     )
 
     args = parser.parse_args()
@@ -100,63 +113,78 @@ if __name__ == "__main__":
     public_key_path = dot_ssh_path / "cscs-key-cert.pub"
 
     # If a key pair exists, try adding it to the agent then exit
-    if not args.force and args.add and private_key_path.exists():
-        delta = timedelta(
-            milliseconds=datetime.now().timestamp() - private_key_path.stat().st_ctime
-        )
-        if delta < timedelta(hours=24.0):
-            logging.info("Valid private key found, adding it to ssh-agent...")
-            if not args.dry_run:
-                add_key(private_key_path)
-            print("Done.")
-            sys.exit(0)
-
-    # Test if a keypair already exists
-    if private_key_path.exists() or public_key_path.exists():
-        if args.force:
-            logging.warning("Deleting existing keys...")
-            if not args.dry_run:
-                private_key_path.unlink(missing_ok=True)
-                public_key_path.unlink(missing_ok=True)
-        else:
-            logging.error(
-                "Key pair already exists. Use --force if you want to delete them."
+    if args.command == "add":
+        if private_key_path.exists() and public_key_path.exists():
+            delta = timedelta(
+                milliseconds=datetime.now().timestamp()
+                - private_key_path.stat().st_ctime
             )
+            if delta < timedelta(hours=24.0):
+                logging.info("Valid private key found, adding it to ssh-agent...")
+                if not args.dry_run:
+                    add_key(private_key_path)
+                print("Done.")
+                sys.exit(0)
+            else:
+                logging.warning(
+                    "Private key is older than 24 hours, please fetch a new one."
+                )
+                sys.exit(1)
+        else:
+            logging.error("No valid private key found.")
             sys.exit(1)
 
-    # Create a new credentials helper
-    CredsHelper = BWHelper if args.backend in ("bw", "bitwarden") else OPHelper
-    vault = CredsHelper(item_name=args.item_id)
+    elif args.command == "fetch":
+        # Test if a keypair already exists
+        if private_key_path.exists() or public_key_path.exists():
+            if args.force:
+                logging.warning("Deleting existing keys...")
+                if not args.dry_run:
+                    private_key_path.unlink(missing_ok=True)
+                    public_key_path.unlink(missing_ok=True)
+            else:
+                logging.error(
+                    "Key pair already exists. Use --force if you want to delete them."
+                )
+                sys.exit(1)
 
-    # Get the credentials
-    logging.info("Unlocking the vault and fetching credentials...")
-    vault.unlock()
-    credentials = vault.fetch_credentials()
+        # Create a new credentials helper
+        CredsHelper = BWHelper if args.backend in ("bw", "bitwarden") else OPHelper
+        vault = CredsHelper(item_name=args.item_id)
 
-    # Validate the credentials
-    if not vault.are_credentials_valid():
-        # TODO: catch which credential is not valid
-        raise SystemExit("Credentials are not valid.")
+        # Get the credentials
+        logging.info("Unlocking the vault and fetching credentials...")
+        vault.unlock()
+        credentials = vault.fetch_credentials()
 
-    logging.info(
-        f"Fetching signed key from CSCS API and saving it to '{private_key_path.parent}'..."
-    )
-    if not args.dry_run:
-        private_key, public_key = get_keys_from_api(**credentials)
+        # Validate the credentials
+        if not vault.are_credentials_valid():
+            # TODO: catch which credential is not valid
+            raise SystemExit("Credentials are not valid.")
 
-        if not (private_key or public_key):
-            raise SystemExit("Could not fetch signed key from CSCS API.")
-
-        save_key(private_key, private_key_path, "private")
-        save_key(public_key, public_key_path, "public")
-
-    logging.info("Done.")
-
-    # TODO: set the passphrase on the private key
-
-    if args.add:
-        logging.info("Adding private key to ssh-agent...")
+        logging.info(
+            "Fetching signed key from CSCS API and saving it to '%s'...",
+            private_key_path.parent,
+        )
         if not args.dry_run:
-            add_key(private_key_path)
+            private_key, public_key = get_keys_from_api(**credentials)
+
+            if not (private_key or public_key):
+                raise SystemExit("Could not fetch signed key from CSCS API.")
+
+            save_key(private_key, private_key_path, "private")
+            save_key(public_key, public_key_path, "public")
+
+        logging.info("Done.")
+
+        # TODO: set the passphrase on the private key
+
+        if args.add:
+            logging.info("Adding private key to ssh-agent...")
+            if not args.dry_run:
+                add_key(private_key_path)
+
+    else:
+        parser.print_help()
 
     sys.exit(0)

@@ -7,6 +7,7 @@ name = "pypi"
 requests = "*"
 attrs = "*"
 typer = {extras = ["all"], version = "*"}
+certifi = "*"
 
 [dev-packages]
 

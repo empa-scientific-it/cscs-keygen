@@ -8,7 +8,8 @@ from abc import ABC, abstractmethod
 from typing import Dict, NoReturn
 
 from attr import define, field, validators
-from utils import run_command
+
+from cscs_keygen.utils import run_command
 
 
 class CredentialsHelperError(Exception):
@@ -142,4 +143,5 @@ class OPHelper(CredsHelper):
             msg = f"Failed to fetch {self.backend_name} credentials."
             raise CredentialsHelperError(msg) from err
 
+        return self.credentials
         return self.credentials

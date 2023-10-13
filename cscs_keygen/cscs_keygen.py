@@ -16,9 +16,10 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
 import typer
-from credentials_helper import BWHelper, OPHelper
 from typing_extensions import Annotated
-from utils import add_key, get_keys_from_api, save_key, setup_logging
+
+from cscs_keygen.credentials_helper import BWHelper, OPHelper
+from cscs_keygen.utils import add_key, get_keys_from_api, save_key, setup_logging
 
 
 class Backend(str, enum.Enum):
@@ -170,4 +171,5 @@ def entry_point() -> None:
 
 
 if __name__ == "__main__":
+    app()
     app()

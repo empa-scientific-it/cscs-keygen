@@ -27,8 +27,12 @@ classifiers = [
 dependencies = [
     "requests >= 2.28.2, < 3.0.0",
     "typer >= 0.7.0, < 1.0.0",
-    "attrs ~= 2.31",
+    "attrs >= 23.1.0, < 24.0.0",
+    "rich >= 13.6.0, < 14.0.0",
 ]
+
+[project.scripts]
+cscs-keygen = "cscs_keygen:cli"
 
 [project.urls]
 Documentation = "https://github.com/empa-scientific-it/cscs-keygen#readme"
@@ -36,7 +40,7 @@ Issues = "https://github.com/empa-scientific-it/cscs-keygen/issues"
 Source = "https://github.com/empa-scientific-it/cscs-keygen"
 
 [tool.hatch.version]
-path = "src/cscs_keygen/__about__.py"
+path = "cscs_keygen/__init__.py"
 
 [tool.hatch.envs.default]
 dependencies = [
@@ -134,28 +138,6 @@ unfixable = [
 [tool.ruff.isort]
 known-first-party = ["cscs_keygen"]
 
-[tool.ruff.flake8-tidy-imports]
-ban-relative-imports = "all"
-
 [tool.ruff.per-file-ignores]
 # Tests can use magic values, assertions, and relative imports
 "tests/**/*" = ["PLR2004", "S101", "TID252"]
-
-[tool.coverage.run]
-source_pkgs = ["cscs_keygen", "tests"]
-branch = true
-parallel = true
-omit = [
-  "src/cscs_keygen/__about__.py",
-]
-
-[tool.coverage.paths]
-cscs_keygen = ["src/cscs_keygen", "*/cscs-keygen/src/cscs_keygen"]
-tests = ["tests", "*/cscs-keygen/tests"]
-
-[tool.coverage.report]
-exclude_lines = [
-  "no cov",
-  "if __name__ == .__main__.:",
-  "if TYPE_CHECKING:",
-]

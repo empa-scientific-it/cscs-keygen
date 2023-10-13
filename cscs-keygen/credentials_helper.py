@@ -5,10 +5,9 @@ import json
 import os
 import re
 from abc import ABC, abstractmethod
-from typing import NoReturn, Dict
+from typing import Dict, NoReturn
 
 from attr import define, field, validators
-
 from utils import run_command
 
 
@@ -42,7 +41,8 @@ class CredsHelper(ABC):
 
     @credentials.setter
     def credentials(self, _) -> NoReturn:
-        raise CredentialsHelperError("Credentials cannot be set manually.")
+        msg = "Credentials cannot be set manually."
+        raise CredentialsHelperError(msg)
 
     @property
     def is_unlocked(self) -> bool:
@@ -51,9 +51,8 @@ class CredsHelper(ABC):
 
     @is_unlocked.setter
     def is_unlocked(self, _) -> NoReturn:
-        raise CredentialsHelperError(
-            f"You must login or unlock {self.backend_name} first."
-        )
+        msg = f"You must login or unlock {self.backend_name} first."
+        raise CredentialsHelperError(msg)
 
     def are_credentials_valid(self) -> bool:
         """Validate credentials"""
@@ -62,9 +61,9 @@ class CredsHelper(ABC):
 
         return all(
             (
-                re.match(r"^[a-z0-9_-]{2,15}$", self.credentials.get("username")),
+                re.match(r"^[a-z0-9_-]{2,15}$", self.credentials.get("username", "")),
                 self.credentials.get("password"),
-                re.match(r"^[0-9]{6}$", self.credentials.get("totp")),
+                re.match(r"^[0-9]{6}$", self.credentials.get("totp", "")),
             )
         )
 
@@ -90,16 +89,16 @@ class BWHelper(CredsHelper):
     def fetch_credentials(self) -> Dict[str, str]:
         """Fetch the credentials from Bitwarden vault"""
         if not self.is_unlocked:
-            raise CredentialsHelperError(
-                f"{self.backend_name} vault is locked or you never logged in."
-            )
+            msg = f"{self.backend_name} vault is locked or you never logged in."
+            raise CredentialsHelperError(msg)
 
         if not self.item_name:
-            raise ValueError("Bitwarden item's ID or name must be provided.")
+            msg = "Bitwarden item's ID or name must be provided."
+            raise ValueError(msg)
 
         for __field in ("username", "password", "totp"):
-            self.credentials[__field] = run_command(
-                f'bw get {__field} "{self.item_name}" --raw', text=True
+            self.credentials[__field] = str(
+                run_command(f'bw get {__field} "{self.item_name}" --raw', text=True)
             ).strip()
 
         return self.credentials
@@ -113,31 +112,34 @@ class OPHelper(CredsHelper):
 
     def unlock(self) -> None:
         if not self.is_unlocked:
-            if (
-                os.getenv(self.backend_token)
-                or run_command("op signin", capture=False) == 0
-            ):
+            if os.getenv(self.backend_token) or run_command("op signin", capture=False) == 0:
                 self._is_unlocked = True
 
     def fetch_credentials(self) -> Dict[str, str]:
         """Fetch the credentials from 1Password vault"""
         if not self.is_unlocked:
-            raise CredentialsHelperError(
-                f"{self.backend_name} vault is locked or you never logged in."
-            )
+            msg = f"{self.backend_name} vault is locked or you never logged in."
+            raise CredentialsHelperError(msg)
 
         if not self.item_name:
-            raise TypeError("1Password item's name must be provided.")
+            msg = "1Password item's name must be provided."
+            raise TypeError(msg)
 
         creds = json.loads(
-            run_command(
-                f'op item get "{self.item_name}" --format json --fields label=username,password,totp',
-                text=True,
+            str(
+                run_command(
+                    f'op item get "{self.item_name}" --format json --fields label=username,password,totp',
+                    text=True,
+                )
             )
         )
 
-        self.credentials["username"] = creds[0]["value"]
-        self.credentials["password"] = creds[1]["value"]
-        self.credentials["totp"] = creds[2]["totp"]
+        try:
+            self.credentials["username"] = creds[0]["value"]
+            self.credentials["password"] = creds[1]["value"]
+            self.credentials["totp"] = creds[2]["totp"]
+        except (IndexError, KeyError) as err:
+            msg = f"Failed to fetch {self.backend_name} credentials."
+            raise CredentialsHelperError(msg) from err
 
         return self.credentials

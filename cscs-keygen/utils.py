@@ -1,28 +1,36 @@
 """
 Utils module
 """
+import logging
+import os
 import pathlib as pl
 import shlex
 import subprocess as sp
 import sys
-import logging
 
 import requests
 
 
-def run_command(
-    cmd: str | list[str], capture: bool = True, check: bool = True, **kwargs
-) -> str | int:
+def setup_logging(verbosity: int) -> None:
+    """Setup logging"""
+    # default: logging.WARNING
+    default_log_level = getattr(logging, (os.getenv("LOG_LEVEL", "WARNING").upper()))
+    verbosity = min(2, verbosity)
+
+    log_level = default_log_level - verbosity * 10
+
+    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=log_level)
+
+
+def run_command(cmd: str | list[str], *, capture: bool = True, check: bool = True, **kwargs) -> str | int:
     """Run a `cmd` and return the output or raise an exception"""
     if isinstance(cmd, str) and sys.platform != "win32":
         cmd = shlex.split(cmd)
 
     try:
-        output = sp.run(cmd, capture_output=capture, check=check, **kwargs)
+        output = sp.run(cmd, capture_output=capture, check=check, **kwargs)  # noqa: S603
     except sp.CalledProcessError as err:
-        logging.error(
-            "Error while running the command '%s': %s", " ".join(cmd), err.stderr
-        )
+        logging.error("Error while running the command '%s': %s", " ".join(cmd), err.stderr)
         raise SystemExit(err.returncode) from err
 
     if capture:
@@ -34,9 +42,7 @@ def run_command(
     return output.returncode
 
 
-def get_keys_from_api(
-    username: str, password: str, totp: str
-) -> tuple[str | None, str | None]:
+def get_keys_from_api(username: str, password: str, totp: str) -> tuple[str | None, str | None]:
     """Perform the API request to CSCS"""
     logging.info("Fetching signed key from CSCS API...")
 
@@ -74,12 +80,12 @@ def get_keys_from_api(
 def save_key(key_content: str | None, key_path: pl.Path, key_type: str) -> None:
     """Save a key file to disk and set the right permissions"""
     if not key_content:
-        logging.error(f"Error: could not save {key_type} key to {key_path}")
-        raise TypeError("Key content is empty.")
+        logging.error(f"Error: could not save {key_type} key to {key_path}: key content is invalid.")
+        raise TypeError
 
     try:
         key_path.write_text(key_content)
-    except IOError:
+    except OSError:
         logging.error(f"Error: could not write {key_type} key to {key_path}")
         sys.exit(1)
 

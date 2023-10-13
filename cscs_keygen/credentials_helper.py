@@ -144,4 +144,3 @@ class OPHelper(CredsHelper):
             raise CredentialsHelperError(msg) from err
 
         return self.credentials
-        return self.credentials

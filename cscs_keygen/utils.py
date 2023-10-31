@@ -63,7 +63,7 @@ def get_keys_from_api(username: str, password: str, totp: str) -> tuple[str | No
         response.raise_for_status()
     except requests.exceptions.HTTPError as err:
         try:
-            message = err.response.json()
+            message = err.response.json()  # type: ignore
         except Exception:
             raise SystemExit(1) from err
 

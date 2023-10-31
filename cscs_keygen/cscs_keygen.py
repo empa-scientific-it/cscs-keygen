@@ -39,6 +39,7 @@ class Keys:
 
     def __post_init__(self) -> None:
         """Set private/public key paths"""
+        self.dot_ssh_path.mkdir(exist_ok=True)
         self.private_key = self.dot_ssh_path / "cscs-key"
         self.public_key = self.dot_ssh_path / "cscs-key-cert.pub"
 
@@ -79,10 +80,14 @@ def fetch(
     ],
     *,
     force: Annotated[bool, typer.Option(help="Delete existing keys and fetch new ones.")] = False,
+    save: Annotated[bool, typer.Option(help="Import the private key in your password manager.")] = False,
 ):
     """
     Fetch a new key pair from CSCS service.
     """
+    private_key = None
+    public_key = None
+
     if state.keys.exist():
         if not force:
             logging.warning("Key pair already exists, use --force to overwrite.")
@@ -120,6 +125,10 @@ def fetch(
             state.keys.save("public", public_key)
         else:
             sys.exit("Could not fetch signed key from CSCS API.")
+
+    if save:
+        logging.info("Importing the private key in your password manager...")
+        # TODO: save the private key in the vault
 
     logging.info("Done.")
 

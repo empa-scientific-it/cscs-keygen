@@ -1,2 +1,7 @@
+.idea
 .venv
+.nova
+.mypy_cache
 __pycache__
+test-env
+test-venv

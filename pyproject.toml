@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "cscs-keygen"
+name = "cscs_keygen"
 dynamic = ["version"]
 description = "Python script to automate fetching a new SSH keypair for CSCS infrastructure. It relies on credentials stored in a cloud-based password manager, like Bitwarden or 1Password."
 readme = "README.md"

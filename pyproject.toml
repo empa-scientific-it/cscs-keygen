@@ -99,7 +99,7 @@ known-first-party = ["cscs_keygen"]
 "tests/**/*" = ["PLR2004", "S101", "TID252"]
 
 [tool.ruff.format]
-quote-style = "single"
+quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"

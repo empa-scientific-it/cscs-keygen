@@ -43,6 +43,8 @@ build-backend = "poetry.core.masonry.api"
 [tool.ruff]
 target-version = "py37"
 line-length = 120
+
+[tool.ruff.lint]
 select = [
     "A",
     "ARG",
@@ -70,6 +72,7 @@ select = [
     "W",
     "YTT",
 ]
+
 ignore = [
     # Allow non-abstract empty methods in abstract base classes
     "B027",
@@ -85,18 +88,21 @@ ignore = [
     "PLR0912",
     "PLR0913",
     "PLR0915",
+    # Ignore single-line-implicit-string-concatenation
+    "ISC001",
 ]
+
 unfixable = [
     # Don't touch unused imports
     "F401",
 ]
 
-[tool.ruff.isort]
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = ["PLR2004", "S101", "TID252"]
+
+[tool.ruff.lint.isort]
 known-first-party = ["cscs_keygen"]
 
-[tool.ruff.per-file-ignores]
-# Tests can use magic values, assertions, and relative imports
-"tests/**/*" = ["PLR2004", "S101", "TID252"]
 
 [tool.ruff.format]
 quote-style = "double"

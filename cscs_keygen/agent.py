@@ -1,7 +1,7 @@
 """
 SSH agent utilities
 """
-import logging
+
 import sys
 
 from cscs_keygen.models import Key

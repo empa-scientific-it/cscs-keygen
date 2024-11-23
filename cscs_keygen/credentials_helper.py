@@ -1,6 +1,7 @@
 """
 A credentials helper class for Bitwarden and 1Password
 """
+
 import json
 import os
 import re

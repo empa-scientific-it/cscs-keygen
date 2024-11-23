@@ -7,8 +7,23 @@ import os
 import shlex
 import subprocess as sp
 import sys
+from typing import Optional
 
 import requests
+from pydantic import BaseModel, Field
+
+
+class SSHKeyResponse(BaseModel):
+    """Base model for SSH key response"""
+
+    public: str = Field(..., description="Public key")
+    private: str = Field(..., description="Private key")
+
+    class Config:
+        """Pydantic configuration"""
+
+        frozen = True
+        extra = "ignore"
 
 
 def setup_logging(verbosity: int) -> None:
@@ -47,11 +62,9 @@ def run_command(cmd: str | list[str], *, capture: bool = True, check: bool = Tru
     return output.returncode
 
 
-def get_keys_from_api(username: str, password: str, totp: str) -> tuple[str | None, str | None]:
+def get_keys_from_api(username: str, password: str, totp: str) -> tuple[Optional[str], Optional[str]]:
     """Perform the API request to CSCS"""
     logging.info("Fetching signed key from CSCS API...")
-
-    priv_key, pub_key = None, None
 
     try:
         response = requests.post(
@@ -66,9 +79,11 @@ def get_keys_from_api(username: str, password: str, totp: str) -> tuple[str | No
             timeout=30.0,
         )
         response.raise_for_status()
+
+        key_response = SSHKeyResponse.model_validate(response.json())
     except requests.exceptions.HTTPError as err:
         try:
-            message = err.response.json()  # type: ignore
+            message = err.response.json()
         except Exception:
             raise SystemExit(1) from err
 
@@ -76,7 +91,6 @@ def get_keys_from_api(username: str, password: str, totp: str) -> tuple[str | No
             logging.error(f"Error: {message['payload']}")
             sys.exit(1)
     else:
-        pub_key = response.json()["public"]
-        priv_key = response.json()["private"]
+        return key_response.public, key_response.private
 
-    return priv_key, pub_key
+    return None, None

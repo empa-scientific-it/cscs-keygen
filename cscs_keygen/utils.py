@@ -34,10 +34,14 @@ def setup_logging(verbosity: int) -> None:
 
     log_level = default_log_level - verbosity * 10
 
-    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=log_level)
+    logging.basicConfig(
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=log_level
+    )
 
 
-def run_command(cmd: str | list[str], *, capture: bool = True, check: bool = True, **kwargs) -> str | int:
+def run_command(
+    cmd: str | list[str], *, capture: bool = True, check: bool = True, **kwargs
+) -> str | int:
     """Run a `cmd` and return the output or raise an exception"""
     text = bool(kwargs.get("text"))
 
@@ -45,7 +49,9 @@ def run_command(cmd: str | list[str], *, capture: bool = True, check: bool = Tru
         cmd = shlex.split(cmd)
 
     try:
-        output = sp.run(cmd, capture_output=capture, check=check, **kwargs)  # noqa: S603
+        output = sp.run(
+            cmd, capture_output=capture, check=check, **kwargs
+        )  # noqa: S603
     except sp.CalledProcessError as err:
         logging.error(
             "Error while running the command '%s': %s",
@@ -62,7 +68,9 @@ def run_command(cmd: str | list[str], *, capture: bool = True, check: bool = Tru
     return output.returncode
 
 
-def get_keys_from_api(username: str, password: str, totp: str) -> tuple[Optional[str], Optional[str]]:
+def get_keys_from_api(
+    username: str, password: str, totp: str
+) -> tuple[Optional[str], Optional[str]]:
     """Perform the API request to CSCS"""
     logging.info("Fetching signed key from CSCS API...")
 
@@ -91,6 +99,6 @@ def get_keys_from_api(username: str, password: str, totp: str) -> tuple[Optional
             logging.error(f"Error: {message['payload']}")
             sys.exit(1)
     else:
-        return key_response.public, key_response.private
+        return key_response.private, key_response.public
 
     return None, None

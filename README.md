@@ -40,7 +40,7 @@ To upgrade an existing installation:
 pipx upgrade cscs-keygen
 ```
 
-### Using Poetry (recommended)
+### Using Poetry (recommended for developers)
 
 1. Clone this repository:
 ```bash

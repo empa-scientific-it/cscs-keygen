@@ -21,8 +21,7 @@ Python script to automate fetching a new SSH keypair for CSCS infrastructure. It
   - [1Password](https://support.1password.com/command-line-getting-started/)
 - (optional) A virtual environment with `venv` or `pipenv` (or any other similar utility of your choice)
 
-> **Note**
->
+> [!NOTE]
 > Bitwarden's free plan does **not** include the option to store TOTP secrets. You will need to upgrade to a [paid plan](https://bitwarden.com/pricing/) to use this script with Bitwarden.
 
 ## Installation
@@ -57,6 +56,9 @@ poetry install
 ```bash
 poetry shell
 ```
+
+> [!WARNING]
+> [Since Poetry **v2.0.0**](https://python-poetry.org/docs/managing-environments/#activating-the-environment), the command `poetry shell` has been moved to an [optional plugin]([url](https://github.com/python-poetry/poetry-plugin-shell)). You can either install the plugin or use `eval $(poetry env activate)` (Bash/Zsh) or `eval (poetry env activate)` (Fish)
 
 ### Using pip
 

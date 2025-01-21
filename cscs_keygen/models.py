@@ -7,6 +7,8 @@ from attr import define, field
 
 from cscs_keygen.utils import run_command
 
+logger = logging.getLogger(__name__)
+
 
 @define
 class Key:
@@ -76,13 +78,13 @@ class Key:
         """Save a key file to disk and set the right permissions"""
         if not self.content:
             msg = f"Error: could not save {self._type} key to {self.path}: key content is invalid."
-            logging.error(msg)
+            logger.error(msg)
             raise TypeError(msg)
 
         try:
             self.path.write_text(self.content)
         except OSError as err:
-            logging.error(f"Error: could not write {self._type} key to {self.path}")
+            logger.error(f"Error: could not write {self._type} key to {self.path}")
             raise SystemExit(1) from err
 
         try:
@@ -91,7 +93,7 @@ class Key:
             elif self._type == "public":
                 self.path.chmod(0o644)
         except PermissionError as err:
-            logging.error(f"Error: could not set permissions on key {self.path}")
+            logger.error(f"Error: could not set permissions on key {self.path}")
             raise SystemExit(1) from err
 
 

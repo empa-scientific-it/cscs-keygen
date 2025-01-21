@@ -29,6 +29,8 @@ class Backend(str, enum.Enum):
     OP = "op"
 
 
+logger = logging.getLogger(__name__)
+
 app = typer.Typer()
 state = State()
 
@@ -54,20 +56,22 @@ def fetch(
 
     if keys.exist():
         if not force:
-            logging.warning("Key pair already exists, use --force to overwrite.")
-            logging.info(str(keys))
+            logger.warning("Key pair already exists, use --force to overwrite.")
+            logger.info(str(keys))
             sys.exit(1)
+
+        if state.dry_run:
+            logger.warning("Dry run: Would delete existing keys")
         else:
-            logging.warning("Deleting existing keys...")
-            if not state.dry_run:
-                keys.delete()
+            logger.warning("Deleting existing keys...")
+            keys.delete()
 
     # Create a new credentials helper
     creds_helper = BWHelper if backend.value == "bw" else OPHelper
     vault = creds_helper(item_name=item_id)
 
     # Get the credentials
-    logging.info("Unlocking the vault and fetching credentials...")
+    logger.info("Unlocking the vault and fetching credentials...")
     vault.unlock()
     credentials = vault.fetch_credentials()
 
@@ -76,7 +80,7 @@ def fetch(
         # TODO: catch which credential is not valid
         sys.exit("Credentials are not valid.")
 
-    logging.info(
+    logger.info(
         "Fetching signed key from CSCS API and saving it to '%s'...",
         keys.dot_ssh_path,
     )
@@ -91,7 +95,7 @@ def fetch(
         keys.public_key.content = public_key
         keys.save()
 
-    logging.info("Done.")
+    logger.info("Done.")
 
 
 @app.command()
@@ -104,36 +108,36 @@ def add():
     if keys.exist():
         delta = datetime.now(timezone.utc) - datetime.fromtimestamp(keys.private_key.c_time, timezone.utc)
         if delta < timedelta(hours=24.0):
-            logging.info("Valid private key found, adding it to the agent...")
+            logger.info("Valid private key found, adding it to the agent...")
             if not state.dry_run:
                 if not (is_agent_running() and is_key_in_agent(keys.private_key)):
                     add_key_to_agent(keys.private_key)
                 else:
-                    logging.warning("Private key is already in the agent.")
+                    logger.warning("Private key is already in the agent.")
             sys.exit(0)
         else:
-            logging.warning("Private key is older than 24 hours, please fetch a new one.")
+            logger.warning("Private key is older than 24 hours, please fetch a new one.")
             sys.exit(1)
     else:
-        logging.error("No valid keys found.")
+        logger.error("No valid keys found.")
         sys.exit(1)
 
 
 @app.callback()
 def main(
     *,
-    verbose: Annotated[int, typer.Option(count=True, help="Enable verbose mode.")] = 0,
+    verbose: Annotated[int, typer.Option(help="Enable verbose mode.")] = 0,
     dry_run: Annotated[bool, typer.Option(help="Log the actions without executing them.")] = False,
 ):
     """
     Manage SSH keypair for CSCS infrastructure using credentials stored in a password manager.
     """
     if verbose:
-        logging.info("Verbose mode enabled.")
+        logger.info("Verbose mode enabled.")
         state.verbose = verbose
 
     if dry_run:
-        logging.info("Dry run mode enabled, no action will be executed.")
+        logger.info("Dry run mode enabled, no action will be executed.")
         state.dry_run = True
 
     setup_logging(state.verbose)

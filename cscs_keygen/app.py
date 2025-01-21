@@ -68,7 +68,7 @@ def fetch(
             sys.exit(1)
 
         if state.dry_run:
-            logger.warning("Dry run: Would delete existing keys")
+            logger.warning("Dry run: Would delete existing keys.")
         else:
             logger.warning("Deleting existing keys...")
             keys.delete()
@@ -87,12 +87,12 @@ def fetch(
         # TODO: catch which credential is not valid
         sys.exit("Credentials are not valid.")
 
-    logger.info(
-        "Fetching signed key from CSCS API and saving it to '%s'...",
-        keys.dot_ssh_path,
-    )
-
     if not state.dry_run:
+        logger.info(
+            "Fetching signed key from CSCS API and saving it to '%s'...",
+            keys.dot_ssh_path,
+        )
+
         private_key, public_key = get_keys_from_api(**credentials)
 
         if not (private_key and public_key):
@@ -102,7 +102,9 @@ def fetch(
         keys.public_key.content = public_key
         keys.save()
 
-    logger.info("Done.")
+        logger.info("Done.")
+    else:
+        logger.info("Dry run: Would fetch signed key from CSCS API.")
 
 
 @app.command()

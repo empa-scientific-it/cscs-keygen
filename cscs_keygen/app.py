@@ -50,6 +50,7 @@ def fetch(
     """
     Fetch a new key pair from CSCS service.
     """
+
     private_key = None
     public_key = None
     keys = state.keys
@@ -103,44 +104,55 @@ def add():
     """
     Add an existing key pair to SSH agent.
     """
+
     keys = state.keys
 
-    if keys.exist():
-        delta = datetime.now(timezone.utc) - datetime.fromtimestamp(keys.private_key.c_time, timezone.utc)
-        if delta < timedelta(hours=24.0):
-            logger.info("Valid private key found, adding it to the agent...")
-            if not state.dry_run:
-                if not (is_agent_running() and is_key_in_agent(keys.private_key)):
-                    add_key_to_agent(keys.private_key)
-                else:
-                    logger.warning("Private key is already in the agent.")
-            sys.exit(0)
-        else:
-            logger.warning("Private key is older than 24 hours, please fetch a new one.")
-            sys.exit(1)
-    else:
+    if not keys.exist():
         logger.error("No valid keys found.")
         sys.exit(1)
+
+    delta = datetime.now(timezone.utc) - datetime.fromtimestamp(keys.private_key.c_time, timezone.utc)
+    if delta >= timedelta(hours=24.0):
+        logger.warning("Private key is older than 24 hours, please fetch a new one.")
+        sys.exit(1)
+
+    if state.dry_run:
+        logger.info("Dry run: Would add private key to the agent.")
+
+    if not is_agent_running():
+        logger.error("SSH agent is not running.")
+        sys.exit(1)
+
+    if is_key_in_agent(keys.private_key):
+        logger.warning("Private key is already in the agent.")
+        sys.exit(0)
+
+    logger.info("Adding private key to the agent...")
+    add_key_to_agent(keys.private_key)
+    logger.info("Key successfully added to the agent.")
 
 
 @app.callback()
 def main(
     *,
-    verbose: Annotated[int, typer.Option(help="Enable verbose mode.")] = 0,
-    dry_run: Annotated[bool, typer.Option(help="Log the actions without executing them.")] = False,
+    verbose: Annotated[
+        int, typer.Option("--verbose", "-v", count=True, help="Increase verbosity (can be repeated: -v, -vv)")
+    ] = 0,
+    dry_run: Annotated[bool, typer.Option("--dry-run", "-n", help="Log the actions without executing them.")] = False,
 ):
     """
     Manage SSH keypair for CSCS infrastructure using credentials stored in a password manager.
     """
+    setup_logging(verbose)
+
+    state.verbose = verbose
+    state.dry_run = dry_run
+
     if verbose:
         logger.info("Verbose mode enabled.")
-        state.verbose = verbose
 
     if dry_run:
         logger.info("Dry run mode enabled, no action will be executed.")
-        state.dry_run = True
-
-    setup_logging(state.verbose)
 
 
 def entry_point() -> None:

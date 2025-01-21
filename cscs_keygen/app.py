@@ -37,15 +37,21 @@ state = State()
 
 @app.command()
 def fetch(
-    backend: Annotated[Backend, typer.Argument(..., help="Backend for your vault: Bitwarden or 1Password")],
+    backend: Annotated[
+        Backend,
+        typer.Argument(..., help="Backend for your vault: Bitwarden or 1Password"),
+    ],
     item_id: Annotated[
         str,
         typer.Argument(
-            ..., help="Item name or ID in your vault that contains the credentials (username, password, totp)"
+            ...,
+            help="Item name or ID in your vault that contains the credentials (username, password, totp)",
         ),
     ],
     *,
-    force: Annotated[bool, typer.Option(help="Delete existing keys and fetch new ones.")] = False,
+    force: Annotated[
+        bool, typer.Option(help="Delete existing keys and fetch new ones.")
+    ] = False,
 ):
     """
     Fetch a new key pair from CSCS service.
@@ -58,7 +64,7 @@ def fetch(
     if keys.exist():
         if not force:
             logger.warning("Key pair already exists, use --force to overwrite.")
-            logger.info(str(keys))
+            logger.debug(str(keys))
             sys.exit(1)
 
         if state.dry_run:
@@ -111,7 +117,9 @@ def add():
         logger.error("No valid keys found.")
         sys.exit(1)
 
-    delta = datetime.now(timezone.utc) - datetime.fromtimestamp(keys.private_key.c_time, timezone.utc)
+    delta = datetime.now(timezone.utc) - datetime.fromtimestamp(
+        keys.private_key.c_time, timezone.utc
+    )
     if delta >= timedelta(hours=24.0):
         logger.warning("Private key is older than 24 hours, please fetch a new one.")
         sys.exit(1)
@@ -136,9 +144,18 @@ def add():
 def main(
     *,
     verbose: Annotated[
-        int, typer.Option("--verbose", "-v", count=True, help="Increase verbosity (can be repeated: -v, -vv)")
+        int,
+        typer.Option(
+            "--verbose",
+            "-v",
+            count=True,
+            help="Increase verbosity (can be repeated: -v, -vv)",
+        ),
     ] = 0,
-    dry_run: Annotated[bool, typer.Option("--dry-run", "-n", help="Log the actions without executing them.")] = False,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", "-n", help="Log the actions without executing them."),
+    ] = False,
 ):
     """
     Manage SSH keypair for CSCS infrastructure using credentials stored in a password manager.

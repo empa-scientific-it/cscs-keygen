@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cscs_keygen"
-version = "0.1.1"
+version = "0.1.2"
 description = "Python script to automate fetching a new SSH keypair for CSCS infrastructure. It relies on credentials stored in a cloud-based password manager, like Bitwarden or 1Password."
 authors = ["edoardob90 <edoardo.baldi@empa.ch>"]
 readme = "README.md"

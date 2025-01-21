@@ -2,19 +2,23 @@
 SSH agent utilities
 """
 
+import logging
+import os
 import sys
 
 from cscs_keygen.models import Key
 from cscs_keygen.utils import run_command
+
+logger = logging.getLogger(__name__)
 
 
 def is_agent_running() -> bool:
     """Check if the SSH agent is running"""
     if sys.platform == "win32":
         # TODO: add support for Windows
+        logger.warning("Interaction with SSH agent on Windows is not supported yet.")
         return False
-
-    return run_command("ssh-add -l", capture=False) == 0
+    return os.getenv("SSH_AUTH_SOCK") is not None
 
 
 def add_key_to_agent(key: Key) -> None:

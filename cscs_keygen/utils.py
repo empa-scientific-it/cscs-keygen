@@ -47,7 +47,7 @@ def run_command(cmd: str | list[str], *, capture: bool = True, check: bool = Tru
         cmd = shlex.split(cmd)
 
     try:
-        output = sp.run(cmd, capture_output=capture, check=check, **kwargs)
+        output = sp.run(cmd, check=check, capture_output=capture, stdout=sp.DEVNULL if not capture else None, **kwargs)
     except sp.CalledProcessError as err:
         logger.error(
             "Error while running the command '%s': %s",

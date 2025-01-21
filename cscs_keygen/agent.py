@@ -14,7 +14,7 @@ def is_agent_running() -> bool:
         # TODO: add support for Windows
         return False
 
-    return run_command("ssh-add -l", check=False) == 0
+    return run_command("ssh-add -l", capture=False) == 0
 
 
 def add_key_to_agent(key: Key) -> None:

@@ -21,7 +21,7 @@ class CredentialsHelperError(Exception):
 class CredsHelper(ABC):
     """A base class for password managers"""
 
-    backend: str = field(validator=validators.in_(["bw", "op"]))
+    backend: str = field(validator=validators.in_(["bw", "op", "1p"]))
     backend_token: str = field(init=False)
     backend_name: str = field(init=False)
     item_name: str = ""
@@ -32,7 +32,7 @@ class CredsHelper(ABC):
         if self.backend == "bw":
             self.backend_token = "BW_SESSION"
             self.backend_name = "Bitwarden"
-        elif self.backend == "op":
+        elif self.backend in ["op", "1p"]:
             self.backend_token = "OP_SERVICE_ACCOUNT_TOKEN"
             self.backend_name = "1Password"
 
@@ -114,7 +114,10 @@ class OPHelper(CredsHelper):
 
     def unlock(self) -> None:
         if not self.is_unlocked:
-            if os.getenv(self.backend_token) or run_command("op signin", capture=False) == 0:
+            if (
+                os.getenv(self.backend_token)
+                or run_command("op signin", capture=False) == 0
+            ):
                 self._is_unlocked = True
 
     def fetch_credentials(self) -> Dict[str, str]:

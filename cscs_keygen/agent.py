@@ -34,4 +34,4 @@ def add_key_to_agent(key: Key) -> None:
 
 def is_key_in_agent(key: Key) -> bool:
     """Check if a key is in the SSH agent"""
-    return key.fingerprint in str(run_command("ssh-add -l", capture=True))
+    return key.fingerprint in str(run_command("ssh-add -l", capture=True, check=False))

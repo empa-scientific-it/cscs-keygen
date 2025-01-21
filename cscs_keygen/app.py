@@ -128,6 +128,7 @@ def add():
 
     if state.dry_run:
         logger.info("Dry run: Would add private key to the agent.")
+        sys.exit(0)
 
     if not is_agent_running():
         logger.error("SSH agent is not running.")

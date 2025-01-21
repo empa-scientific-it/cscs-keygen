@@ -58,7 +58,7 @@ poetry shell
 ```
 
 > [!WARNING]
-> [Since Poetry **v2.0.0**](https://python-poetry.org/docs/managing-environments/#activating-the-environment), the command `poetry shell` has been moved to an [optional plugin]([url](https://github.com/python-poetry/poetry-plugin-shell)). You can either install the plugin or use `eval $(poetry env activate)` (Bash/Zsh) or `eval (poetry env activate)` (Fish)
+> [Since Poetry **v2.0.0**](https://python-poetry.org/docs/managing-environments/#activating-the-environment), the command `poetry shell` has been moved to an [optional plugin](https://github.com/python-poetry/poetry-plugin-shell). You can either install the plugin or use `eval $(poetry env activate)` (Bash/Zsh) or `eval (poetry env activate)` (Fish)
 
 ### Using pip
 

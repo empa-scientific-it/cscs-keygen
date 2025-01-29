@@ -5,12 +5,14 @@ A credentials helper class for Bitwarden and 1Password
 import json
 import os
 import re
+import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, NoReturn
 
 from attr import define, field, validators
 
+from cscs_keygen.logger import logger
 from cscs_keygen.utils import get_command_path, run_command
 
 
@@ -43,8 +45,10 @@ class CredsHelper(ABC):
             cli_name = "op"
 
         if not (cli_path := get_command_path(cli_name)):
-            msg = f"{self.backend_name} CLI not found in PATH. Please install it."
-            raise CredentialsHelperError(msg)
+            logger.error(
+                f"{self.backend_name} CLI not found in PATH. Please install it."
+            )
+            sys.exit(1)
 
         self.backend_cli = cli_path
 

@@ -3,8 +3,10 @@ Utils module
 """
 
 import shlex
+import shutil
 import subprocess as sp
 import sys
+from pathlib import Path
 from typing import Optional
 
 import requests
@@ -91,3 +93,10 @@ def get_keys_from_api(
         return key_response.private, key_response.public
 
     return None, None
+
+
+def get_command_path(command: str) -> Optional[Path]:
+    """Check if a command is available in the PATH"""
+    if cmd := shutil.which(command):
+        return Path(cmd)
+    return None

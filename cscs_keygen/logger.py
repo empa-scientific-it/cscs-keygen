@@ -100,13 +100,19 @@ class Logger(BaseLogger):
         )
 
     @BaseLogger.should_log(LogLevel.ERROR)
-    def error(self, message: str) -> None:
+    def error(self, message: str, exc: Optional[Exception] = None) -> None:
         """Log an error message."""
         self.console.print(
             self._get_timestamp(),
             Text("❌ ", style="error"),
             Text(message, style="error"),
         )
+
+        if exc:
+            self.console.print(
+                Text("   ↳ ", style="error"),
+                Text(f"{exc.__class__.__name__}: {exc!s}", style="error"),
+            )
 
     @BaseLogger.should_log(LogLevel.DEBUG)
     def debug(self, message: str) -> None:

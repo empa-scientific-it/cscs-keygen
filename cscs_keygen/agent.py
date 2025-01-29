@@ -2,14 +2,12 @@
 SSH agent utilities
 """
 
-import logging
 import os
 import sys
 
+from cscs_keygen.logger import logger
 from cscs_keygen.models import Key
 from cscs_keygen.utils import run_command
-
-logger = logging.getLogger(__name__)
 
 
 def is_agent_running() -> bool:

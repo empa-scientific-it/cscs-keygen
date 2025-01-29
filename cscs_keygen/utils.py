@@ -2,8 +2,6 @@
 Utils module
 """
 
-import logging
-import os
 import shlex
 import subprocess as sp
 import sys
@@ -12,7 +10,7 @@ from typing import Optional
 import requests
 from pydantic import BaseModel, Field
 
-logger = logging.getLogger(__name__)
+from cscs_keygen.logger import logger
 
 
 class SSHKeyResponse(BaseModel):
@@ -28,18 +26,9 @@ class SSHKeyResponse(BaseModel):
         extra = "ignore"
 
 
-def setup_logging(verbosity: int) -> None:
-    """Setup logging"""
-    # default: logging.WARNING
-    default_log_level = getattr(logging, (os.getenv("LOG_LEVEL", "WARNING").upper()))
-    verbosity = min(2, verbosity)
-
-    log_level = default_log_level - verbosity * 10
-
-    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=log_level)
-
-
-def run_command(cmd: str | list[str], *, capture: bool = True, check: bool = True, **kwargs) -> str | int:
+def run_command(
+    cmd: str | list[str], *, capture: bool = True, check: bool = True, **kwargs
+) -> str | int:
     """Run a `cmd` and return the output or raise an exception"""
     text = bool(kwargs.get("text"))
 
@@ -47,13 +36,17 @@ def run_command(cmd: str | list[str], *, capture: bool = True, check: bool = Tru
         cmd = shlex.split(cmd)
 
     try:
-        output = sp.run(cmd, check=check, capture_output=capture, stdout=sp.DEVNULL if not capture else None, **kwargs)
-    except sp.CalledProcessError as err:
-        logger.error(
-            "Error while running the command '%s': %s",
-            " ".join(cmd),
-            err.stderr if text else err.stderr.decode().strip(),
+        output = sp.run(
+            cmd,
+            check=check,
+            capture_output=capture,
+            stdout=sp.DEVNULL if not capture else None,
+            **kwargs,
         )
+    except sp.CalledProcessError as err:
+        err_msg = err.stderr if text else err.stderr.decode().strip()
+        cmd_str = " ".join(cmd) if isinstance(cmd, list) else cmd
+        logger.error(f"Error while running the command '{cmd_str}': {err_msg}")
         raise SystemExit(err.returncode) from err
 
     if capture:
@@ -64,7 +57,9 @@ def run_command(cmd: str | list[str], *, capture: bool = True, check: bool = Tru
     return output.returncode
 
 
-def get_keys_from_api(username: str, password: str, totp: str) -> tuple[Optional[str], Optional[str]]:
+def get_keys_from_api(
+    username: str, password: str, totp: str
+) -> tuple[Optional[str], Optional[str]]:
     """Perform the API request to CSCS"""
     logger.info("Fetching signed key from CSCS API...")
 

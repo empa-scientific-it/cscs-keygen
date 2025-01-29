@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Python script to fetch SSH key pair from CSCS service using credentials stored in Bitwarden or 1Password vaults.
+Python script to fetch SSH key pair from CSCS service using credentials
+stored in Bitwarden or 1Password vaults.
 
 Pre-requisites:
     - Python 3 installation and `requirements.txt` dependencies
@@ -9,7 +10,6 @@ Pre-requisites:
 """
 
 import enum
-import logging
 import sys
 from datetime import datetime, timedelta, timezone
 
@@ -18,8 +18,9 @@ from typing_extensions import Annotated
 
 from cscs_keygen.agent import add_key_to_agent, is_agent_running, is_key_in_agent
 from cscs_keygen.credentials_helper import BWHelper, OPHelper
+from cscs_keygen.logger import LogLevel, logger
 from cscs_keygen.models import State
-from cscs_keygen.utils import get_keys_from_api, setup_logging
+from cscs_keygen.utils import get_keys_from_api
 
 
 class Backend(str, enum.Enum):
@@ -28,8 +29,6 @@ class Backend(str, enum.Enum):
     BW = "bw"
     OP = "op"
 
-
-logger = logging.getLogger(__name__)
 
 app = typer.Typer()
 state = State()
@@ -78,9 +77,10 @@ def fetch(
     vault = creds_helper(item_name=item_id)
 
     # Get the credentials
-    logger.info("Unlocking the vault and fetching credentials...")
+    logger.start_status("Unlocking the vault and fetching credentials...")
     vault.unlock()
     credentials = vault.fetch_credentials()
+    logger.stop_status()
 
     # Validate the credentials
     if not vault.are_credentials_valid():
@@ -88,12 +88,9 @@ def fetch(
         sys.exit("Credentials are not valid.")
 
     if not state.dry_run:
-        logger.info(
-            "Fetching signed key from CSCS API and saving it to '%s'...",
-            keys.dot_ssh_path,
-        )
-
+        logger.start_status("Fetching signed key from CSCS API...")
         private_key, public_key = get_keys_from_api(**credentials)
+        logger.stop_status()
 
         if not (private_key and public_key):
             sys.exit("Could not fetch signed key from CSCS API.")
@@ -138,8 +135,9 @@ def add():
         logger.warning("Private key is already in the agent.")
         sys.exit(0)
 
-    logger.info("Adding private key to the agent...")
+    logger.start_status("Adding private key to the agent...")
     add_key_to_agent(keys.private_key)
+    logger.stop_status()
     logger.info("Key successfully added to the agent.")
 
 
@@ -163,13 +161,16 @@ def main(
     """
     Manage SSH keypair for CSCS infrastructure using credentials stored in a password manager.
     """
-    setup_logging(verbose)
+    logger.set_verbosity(verbose)
 
     state.verbose = verbose
     state.dry_run = dry_run
 
     if verbose:
-        logger.info("Verbose mode enabled.")
+        if verbose > LogLevel.INFO:
+            logger.debug("Debug mode enabled.")
+        else:
+            logger.info("Verbose mode enabled.")
 
     if dry_run:
         logger.info("Dry run mode enabled, no action will be executed.")

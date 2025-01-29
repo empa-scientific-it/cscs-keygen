@@ -1,13 +1,11 @@
 """Models for the cscs-keygen package"""
 
-import logging
 import pathlib as pl
 
 from attr import define, field
 
+from cscs_keygen.logger import logger
 from cscs_keygen.utils import run_command
-
-logger = logging.getLogger(__name__)
 
 
 @define
@@ -41,7 +39,11 @@ class Key:
         """Return the key fingerprint"""
         if not self._fingerprint:
             _key_abs_path = self.path.expanduser().resolve()
-            self._fingerprint = str(run_command(f"ssh-keygen -lf {_key_abs_path}", capture=True)).strip().split()[1]
+            self._fingerprint = (
+                str(run_command(f"ssh-keygen -lf {_key_abs_path}", capture=True))
+                .strip()
+                .split()[1]
+            )
 
         return self._fingerprint
 
@@ -77,14 +79,14 @@ class Key:
     def save(self) -> None:
         """Save a key file to disk and set the right permissions"""
         if not self.content:
-            msg = f"Error: could not save {self._type} key to {self.path}: key content is invalid."
+            msg = f"Could not save {self._type} key to {self.path}: empty key."
             logger.error(msg)
             raise TypeError(msg)
 
         try:
             self.path.write_text(self.content)
         except OSError as err:
-            logger.error(f"Error: could not write {self._type} key to {self.path}")
+            logger.error(f"Could not write {self._type} key to {self.path}")
             raise SystemExit(1) from err
 
         try:
@@ -93,7 +95,7 @@ class Key:
             elif self._type == "public":
                 self.path.chmod(0o644)
         except PermissionError as err:
-            logger.error(f"Error: could not set permissions on key {self.path}")
+            logger.error(f"Could not set permissions on key {self.path}")
             raise SystemExit(1) from err
 
 

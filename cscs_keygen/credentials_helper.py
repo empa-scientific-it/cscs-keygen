@@ -35,12 +35,12 @@ class CredsHelper(ABC):
             # Backend is Bitwarden
             self.backend_token = "BW_SESSION"
             self.backend_name = "Bitwarden"
-            _cli_name = "bw"
+            cli_name = "bw"
         else:
             # Must be 1Password
             self.backend_token = "OP_SERVICE_ACCOUNT_TOKEN"
             self.backend_name = "1Password"
-        cli_name = "op"
+            cli_name = "op"
 
         if not (cli_path := get_command_path(cli_name)):
             msg = f"{self.backend_name} CLI not found in PATH. Please install it."

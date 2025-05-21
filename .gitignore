@@ -6,3 +6,4 @@ __pycache__
 test-env
 test-venv
 .zed/settings.json
+.python-version

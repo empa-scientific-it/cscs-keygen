@@ -5,12 +5,15 @@ A credentials helper class for Bitwarden and 1Password
 import json
 import os
 import re
+import sys
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Dict, NoReturn
 
 from attr import define, field, validators
 
-from cscs_keygen.utils import run_command
+from cscs_keygen.logger import logger
+from cscs_keygen.utils import get_command_path, run_command
 
 
 class CredentialsHelperError(Exception):
@@ -24,17 +27,30 @@ class CredsHelper(ABC):
     backend: str = field(validator=validators.in_(["bw", "op", "1p"]))
     backend_token: str = field(init=False)
     backend_name: str = field(init=False)
+    backend_cli: Path = field(init=False)
     item_name: str = ""
     _is_unlocked: bool = False
     __credentials: dict = field(factory=dict, init=False)
 
     def __attrs_post_init__(self) -> None:
         if self.backend == "bw":
+            # Backend is Bitwarden
             self.backend_token = "BW_SESSION"
             self.backend_name = "Bitwarden"
-        elif self.backend in ["op", "1p"]:
+            cli_name = "bw"
+        else:
+            # Must be 1Password
             self.backend_token = "OP_SERVICE_ACCOUNT_TOKEN"
             self.backend_name = "1Password"
+            cli_name = "op"
+
+        if not (cli_path := get_command_path(cli_name)):
+            logger.error(
+                f"{self.backend_name} CLI not found in PATH. Please install it."
+            )
+            sys.exit(1)
+
+        self.backend_cli = cli_path
 
     @property
     def credentials(self) -> Dict[str, str]:
@@ -100,7 +116,10 @@ class BWHelper(CredsHelper):
 
         for __field in ("username", "password", "totp"):
             self.credentials[__field] = str(
-                run_command(f'bw get {__field} "{self.item_name}" --raw', text=True)
+                run_command(
+                    f'{self.backend_cli} get {__field} "{self.item_name}" --raw',
+                    text=True,
+                )
             ).strip()
 
         return self.credentials
@@ -133,7 +152,8 @@ class OPHelper(CredsHelper):
         creds = json.loads(
             str(
                 run_command(
-                    f'op item get "{self.item_name}" --format json --fields label=username,password,totp',
+                    f'{self.backend_cli} item get "{self.item_name}" '
+                    "--format json --fields label=username,password,totp",
                     text=True,
                 )
             )

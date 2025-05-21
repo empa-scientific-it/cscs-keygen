@@ -3,12 +3,14 @@ Utils module
 """
 
 import shlex
+import shutil
 import subprocess as sp
 import sys
+from pathlib import Path
 from typing import Optional
 
 import requests
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from cscs_keygen.logger import logger
 
@@ -19,11 +21,7 @@ class SSHKeyResponse(BaseModel):
     public: str = Field(..., description="Public key")
     private: str = Field(..., description="Private key")
 
-    class Config:
-        """Pydantic configuration"""
-
-        frozen = True
-        extra = "ignore"
+    model_config = ConfigDict(frozen=True, extra="ignore")
 
 
 def run_command(
@@ -76,8 +74,8 @@ def get_keys_from_api(
             timeout=30.0,
         )
         response.raise_for_status()
-
         key_response = SSHKeyResponse.model_validate(response.json())
+
     except requests.exceptions.HTTPError as err:
         try:
             message = err.response.json()
@@ -91,3 +89,10 @@ def get_keys_from_api(
         return key_response.private, key_response.public
 
     return None, None
+
+
+def get_command_path(command: str) -> Optional[Path]:
+    """Check if a command is available in the PATH"""
+    if cmd := shutil.which(command):
+        return Path(cmd)
+    return None

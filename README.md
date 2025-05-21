@@ -1,6 +1,7 @@
 # cscs-keygen
 
-Python script to automate fetching a new SSH keypair for CSCS infrastructure. It relies on credentials stored in a cloud-based password manager, like Bitwarden or 1Password.
+Python script to automate fetching a new SSH keypair for CSCS infrastructure.
+It relies on credentials stored in a cloud-based password manager, like Bitwarden or 1Password.
 
 ## Setup
 
@@ -8,7 +9,7 @@ Python script to automate fetching a new SSH keypair for CSCS infrastructure. It
 
 - Python 3.11+
 - One of the following installation methods:
-  - [Poetry](https://python-poetry.org/) for development and package management
+  - [uv](https://docs.astral.sh/uv/) for development and package management
   - [pipx](https://pypa.github.io/pipx/) for isolated system-wide installation
   - pip for traditional Python package installation
 - An account with a supported password manager. Currently: [Bitwarden](https://bitwarden.com), [1Password](https://1password.com/)
@@ -39,7 +40,7 @@ To upgrade an existing installation:
 pipx upgrade cscs-keygen
 ```
 
-### Using Poetry (recommended for developers)
+### Using uv (recommended for developers)
 
 1. Clone this repository:
 ```bash
@@ -49,16 +50,13 @@ cd cscs-keygen
 
 2. Install dependencies and the package:
 ```bash
-poetry install
+uv sync
 ```
 
-3. Activate the virtual environment:
+3. Run the package:
 ```bash
-poetry shell
+uv run cscs-keygen --help
 ```
-
-> [!WARNING]
-> [Since Poetry **v2.0.0**](https://python-poetry.org/docs/managing-environments/#activating-the-environment), the command `poetry shell` has been moved to an [optional plugin](https://github.com/python-poetry/poetry-plugin-shell). You can either install the plugin or use `eval $(poetry env activate)` (Bash/Zsh) or `eval (poetry env activate)` (Fish)
 
 ### Using pip
 
@@ -80,13 +78,9 @@ Using pipx installation:
 cscs-keygen --help
 ```
 
-Using Poetry:
+Using uv:
 ```bash
-# Inside Poetry shell
-cscs-keygen --help
-
-# Or without activating the shell
-poetry run cscs-keygen --help
+uv run cscs-keygen --help
 ```
 
 Using pip:
@@ -102,12 +96,12 @@ To set up the development environment:
 
 ```bash
 # Install with development dependencies
-poetry install --with dev
+uv sync --dev
 
 # Run tests
-poetry run pytest
+uv run pytest
 
 # Run linting/formatting
-poetry run ruff check .
-poetry run ruff format .
+uv run ruff check .
+uv run ruff format .
 ```

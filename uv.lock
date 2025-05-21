@@ -200,7 +200,7 @@ requires-dist = [
     { name = "requests" },
     { name = "rich", specifier = ">=13.6.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.0" },
-    { name = "typer", extras = ["all"] },
+    { name = "typer" },
 ]
 provides-extras = ["dev"]
 

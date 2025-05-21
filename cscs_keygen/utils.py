@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 import requests
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from cscs_keygen.logger import logger
 
@@ -21,11 +21,7 @@ class SSHKeyResponse(BaseModel):
     public: str = Field(..., description="Public key")
     private: str = Field(..., description="Private key")
 
-    class Config:
-        """Pydantic configuration"""
-
-        frozen = True
-        extra = "ignore"
+    model_config = ConfigDict(frozen=True, extra="ignore")
 
 
 def run_command(
@@ -78,8 +74,8 @@ def get_keys_from_api(
             timeout=30.0,
         )
         response.raise_for_status()
-
         key_response = SSHKeyResponse.model_validate(response.json())
+
     except requests.exceptions.HTTPError as err:
         try:
             message = err.response.json()
